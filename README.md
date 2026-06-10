@@ -41,6 +41,7 @@ The assistant supports common customer-service flows such as order tracking, pro
 - SQLite-based product catalog storage
 - Admin order management dashboard
 - Admin product management dashboard
+- Basic admin authentication for dashboard access
 
 ---
 
@@ -310,6 +311,14 @@ FastAPI Swagger documentation:
 http://127.0.0.1:8000/docs
 ```
 
+Admin dashboard routes are protected with HTTP Basic Authentication.
+
+Default local credentials:
+
+```text
+Username: admin
+Password: admin123
+```
 ---
 
 ## Project Structure
@@ -374,8 +383,7 @@ Built a full-stack conversational AI assistant using Rasa, FastAPI, SQLite, and 
 ## Future Improvements
 
 - Replace SQLite with PostgreSQL for production-level database support
-- Add admin dashboard for managing products, stock, prices, and order status
-- Add admin authentication and role-based access control
+- Replace Basic Auth with JWT-based role-based authentication
 - Add Docker and Docker Compose support
 - Add React or Next.js frontend for a professional UI
 - Add analytics dashboard for complaints, returns, and product enquiries

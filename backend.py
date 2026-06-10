@@ -1,10 +1,28 @@
 import sqlite3
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import requests
+import secrets
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI()
+
+security = HTTPBasic()
+
+
+def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, "admin")
+    correct_password = secrets.compare_digest(credentials.password, "admin123")
+
+    if not correct_username or not correct_password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    return credentials.username
 
 DATABASE_NAME = "complaints.db"
 
@@ -322,7 +340,7 @@ def get_complaint_by_ticket_id(ticket_id: str):
     }
     
 @app.patch("/complaints/{ticket_id}/status")
-def update_complaint_status(ticket_id: str, update: ComplaintStatusUpdate):
+def update_complaint_status(ticket_id: str, update: ComplaintStatusUpdate, admin: str = Depends(verify_admin)):
     allowed_statuses = ["open", "in_progress", "resolved", "closed"]
 
     if update.status not in allowed_statuses:
@@ -474,7 +492,7 @@ def get_return_request(return_id: str):
     }
     
 @app.patch("/returns/{return_id}/status")
-def update_return_status(return_id: str, update: ReturnStatusUpdate):
+def update_return_status(return_id: str, update: ReturnStatusUpdate, admin: str = Depends(verify_admin)):
     allowed_statuses = ["requested", "approved", "picked_up", "refunded", "rejected"]
 
     if update.status not in allowed_statuses:
@@ -577,7 +595,7 @@ def get_all_products():
     return [dict(product) for product in products]
 
 @app.patch("/orders/{order_id}")
-def update_order(order_id: str, update: OrderStatusUpdate):
+def update_order(order_id: str, update: OrderStatusUpdate, admin: str = Depends(verify_admin)):
     conn = get_db_connection()
 
     order = conn.execute(
@@ -617,7 +635,7 @@ def update_order(order_id: str, update: OrderStatusUpdate):
     }
     
 @app.patch("/products/{product_id}")
-def update_product(product_id: str, update: ProductUpdate):
+def update_product(product_id: str, update: ProductUpdate, admin: str = Depends(verify_admin)):
     conn = get_db_connection()
 
     product = conn.execute(
@@ -661,7 +679,7 @@ def update_product(product_id: str, update: ProductUpdate):
     }
 
 @app.get("/admin/returns", response_class=HTMLResponse)
-def returns_admin_dashboard():
+def returns_admin_dashboard(admin: str = Depends(verify_admin)):
     return """
     <!DOCTYPE html>
     <html>
@@ -803,7 +821,7 @@ def returns_admin_dashboard():
     """
     
 @app.get("/admin", response_class=HTMLResponse)
-def admin_dashboard():
+def admin_dashboard(admin: str = Depends(verify_admin)):
     return """
     <!DOCTYPE html>
     <html>
@@ -1098,7 +1116,7 @@ def chat_page():
     """
     
 @app.get("/admin/orders", response_class=HTMLResponse)
-def orders_admin_dashboard():
+def orders_admin_dashboard(admin: str = Depends(verify_admin)):
     return """
     <!DOCTYPE html>
     <html>
@@ -1238,7 +1256,7 @@ def orders_admin_dashboard():
     """
     
 @app.get("/admin/products", response_class=HTMLResponse)
-def products_admin_dashboard():
+def products_admin_dashboard(admin: str = Depends(verify_admin)):
     return """
     <!DOCTYPE html>
     <html>
