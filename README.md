@@ -37,6 +37,8 @@ The assistant supports common customer-service flows such as order tracking, pro
 - FastAPI backend APIs
 - Rasa custom actions
 - Browser-based web chat interface using Rasa REST channel
+- SQLite-based order storage
+- SQLite-based product catalog storage
 
 ---
 
@@ -363,15 +365,16 @@ Built a full-stack conversational AI assistant using Rasa, FastAPI, SQLite, and 
 
 ## Future Improvements
 
-- Replace SQLite with PostgreSQL
-- Move hardcoded order and product data into database tables
-- Add admin authentication
+- Replace SQLite with PostgreSQL for production-level database support
+- Add admin dashboard for managing products, stock, prices, and order status
+- Add admin authentication and role-based access control
 - Add Docker and Docker Compose support
-- Add React or Next.js frontend
-- Add analytics dashboard
-- Add email/SMS notification for ticket updates
-- Add live human handoff
-- Deploy backend and chatbot online
+- Add React or Next.js frontend for a professional UI
+- Add analytics dashboard for complaints, returns, and product enquiries
+- Add email/SMS notification for ticket and return/refund updates
+- Add live human handoff for unresolved customer queries
+- Add logging and monitoring for chatbot conversations
+- Deploy backend, Rasa server, and admin dashboards online
 
 ---
 

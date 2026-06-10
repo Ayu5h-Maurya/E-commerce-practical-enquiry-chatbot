@@ -8,31 +8,31 @@ app = FastAPI()
 
 DATABASE_NAME = "complaints.db"
 
-
-orders = {
-    "12345": {
+INITIAL_ORDERS = [
+    {
         "order_id": "12345",
         "status": "out for delivery",
         "expected_delivery": "today by 8 PM"
     },
-    "98765": {
+    {
         "order_id": "98765",
         "status": "packed and ready to ship",
         "expected_delivery": "tomorrow"
     },
-    "ORD789": {
+    {
         "order_id": "ORD789",
         "status": "delivered",
         "expected_delivery": "already delivered"
     },
-    "ORD555": {
+    {
         "order_id": "ORD555",
         "status": "cancelled",
         "expected_delivery": "not applicable"
     }
-}
+]
 
-products = [
+
+INITIAL_PRODUCTS = [
     {
         "product_id": "P1001",
         "name": "wireless mouse",
@@ -62,6 +62,9 @@ products = [
         "category": "office accessories"
     }
 ]
+
+
+
 
 
 class ComplaintRequest(BaseModel):
@@ -121,8 +124,79 @@ def create_returns_table():
     conn.commit()
     conn.close()
 
+def create_orders_table():
+    conn = get_db_connection()
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id TEXT NOT NULL UNIQUE,
+            status TEXT NOT NULL,
+            expected_delivery TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+    
+def create_products_table():
+    conn = get_db_connection()
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            price INTEGER NOT NULL,
+            stock INTEGER NOT NULL,
+            category TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+    
+def seed_initial_data():
+    conn = get_db_connection()
+
+    for order in INITIAL_ORDERS:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO orders
+            (order_id, status, expected_delivery)
+            VALUES (?, ?, ?)
+            """,
+            (
+                order["order_id"],
+                order["status"],
+                order["expected_delivery"]
+            )
+        )
+
+    for product in INITIAL_PRODUCTS:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO products
+            (product_id, name, price, stock, category)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                product["product_id"],
+                product["name"],
+                product["price"],
+                product["stock"],
+                product["category"]
+            )
+        )
+
+    conn.commit()
+    conn.close()
+
 create_complaints_table()
 create_returns_table()
+create_orders_table()
+create_products_table()
+seed_initial_data()
 
 
 
@@ -133,7 +207,18 @@ def home():
 
 @app.get("/orders/{order_id}")
 def get_order_status(order_id: str):
-    order = orders.get(order_id)
+    conn = get_db_connection()
+
+    order = conn.execute(
+        """
+        SELECT order_id, status, expected_delivery
+        FROM orders
+        WHERE order_id = ?
+        """,
+        (order_id,)
+    ).fetchone()
+
+    conn.close()
 
     if not order:
         return {
@@ -274,18 +359,31 @@ def update_complaint_status(ticket_id: str, update: ComplaintStatusUpdate):
     
 @app.get("/products/search")
 def search_product(q: str):
-    search_query = q.lower().strip()
+    search_query = f"%{q.lower().strip()}%"
 
-    for product in products:
-        if search_query in product["name"].lower():
-            return {
-                "found": True,
-                "product": product
-            }
+    conn = get_db_connection()
+
+    product = conn.execute(
+        """
+        SELECT product_id, name, price, stock, category
+        FROM products
+        WHERE LOWER(name) LIKE ?
+        LIMIT 1
+        """,
+        (search_query,)
+    ).fetchone()
+
+    conn.close()
+
+    if not product:
+        return {
+            "found": False,
+            "message": "Product not found"
+        }
 
     return {
-        "found": False,
-        "message": "Product not found"
+        "found": True,
+        "product": dict(product)
     }
     
 @app.post("/returns")
@@ -433,6 +531,39 @@ def send_message_to_rasa(chat_message: ChatMessage):
             "success": False,
             "message": "Unable to connect to Rasa bot server"
         }
+        
+@app.get("/orders")
+def get_all_orders():
+    conn = get_db_connection()
+
+    orders = conn.execute(
+        """
+        SELECT id, order_id, status, expected_delivery
+        FROM orders
+        ORDER BY id ASC
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return [dict(order) for order in orders]
+
+
+@app.get("/products")
+def get_all_products():
+    conn = get_db_connection()
+
+    products = conn.execute(
+        """
+        SELECT id, product_id, name, price, stock, category
+        FROM products
+        ORDER BY id ASC
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return [dict(product) for product in products]
     
 @app.get("/admin/returns", response_class=HTMLResponse)
 def returns_admin_dashboard():
