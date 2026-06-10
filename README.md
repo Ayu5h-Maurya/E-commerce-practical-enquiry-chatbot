@@ -39,6 +39,8 @@ The assistant supports common customer-service flows such as order tracking, pro
 - Browser-based web chat interface using Rasa REST channel
 - SQLite-based order storage
 - SQLite-based product catalog storage
+- Admin order management dashboard
+- Admin product management dashboard
 
 ---
 
@@ -186,6 +188,12 @@ Bot: Your return/refund request RETURN-1001 for order 12345 is currently request
 | `GET` | `/admin/returns` | Return/refund admin dashboard |
 | `GET` | `/chat` | Browser-based chat UI |
 | `POST` | `/chat/message` | Send chat message to Rasa |
+| `GET` | `/orders` | Get all orders |
+| `PATCH` | `/orders/{order_id}` | Update order status and expected delivery |
+| `GET` | `/products` | Get all products |
+| `PATCH` | `/products/{product_id}` | Update product details |
+| `GET` | `/admin/orders` | Order admin dashboard |
+| `GET` | `/admin/products` | Product admin dashboard |
 
 ---
 

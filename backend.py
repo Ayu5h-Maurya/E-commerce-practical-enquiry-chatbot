@@ -84,6 +84,17 @@ class ReturnStatusUpdate(BaseModel):
 class ChatMessage(BaseModel):
     message: str
     sender: str = "web_user"
+    
+class OrderStatusUpdate(BaseModel):
+    status: str
+    expected_delivery: str
+
+
+class ProductUpdate(BaseModel):
+    name: str
+    price: int
+    stock: int
+    category: str
 
 
 def get_db_connection():
@@ -564,7 +575,91 @@ def get_all_products():
     conn.close()
 
     return [dict(product) for product in products]
+
+@app.patch("/orders/{order_id}")
+def update_order(order_id: str, update: OrderStatusUpdate):
+    conn = get_db_connection()
+
+    order = conn.execute(
+        """
+        SELECT id, order_id, status, expected_delivery
+        FROM orders
+        WHERE order_id = ?
+        """,
+        (order_id,)
+    ).fetchone()
+
+    if not order:
+        conn.close()
+        return {
+            "updated": False,
+            "message": "Order not found"
+        }
+
+    conn.execute(
+        """
+        UPDATE orders
+        SET status = ?, expected_delivery = ?
+        WHERE order_id = ?
+        """,
+        (update.status, update.expected_delivery, order_id)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "updated": True,
+        "order_id": order_id,
+        "new_status": update.status,
+        "expected_delivery": update.expected_delivery,
+        "message": "Order updated successfully"
+    }
     
+@app.patch("/products/{product_id}")
+def update_product(product_id: str, update: ProductUpdate):
+    conn = get_db_connection()
+
+    product = conn.execute(
+        """
+        SELECT id, product_id, name, price, stock, category
+        FROM products
+        WHERE product_id = ?
+        """,
+        (product_id,)
+    ).fetchone()
+
+    if not product:
+        conn.close()
+        return {
+            "updated": False,
+            "message": "Product not found"
+        }
+
+    conn.execute(
+        """
+        UPDATE products
+        SET name = ?, price = ?, stock = ?, category = ?
+        WHERE product_id = ?
+        """,
+        (
+            update.name,
+            update.price,
+            update.stock,
+            update.category,
+            product_id
+        )
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "updated": True,
+        "product_id": product_id,
+        "message": "Product updated successfully"
+    }
+
 @app.get("/admin/returns", response_class=HTMLResponse)
 def returns_admin_dashboard():
     return """
@@ -997,6 +1092,302 @@ def chat_page():
                     sendMessage();
                 }
             }
+        </script>
+    </body>
+    </html>
+    """
+    
+@app.get("/admin/orders", response_class=HTMLResponse)
+def orders_admin_dashboard():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Order Admin Dashboard</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f4f6f8;
+                padding: 30px;
+            }
+
+            h1 {
+                color: #222;
+            }
+
+            a {
+                display: inline-block;
+                margin-right: 15px;
+                margin-bottom: 20px;
+                color: #222;
+                font-weight: bold;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background: white;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            th, td {
+                padding: 12px;
+                border-bottom: 1px solid #ddd;
+                text-align: left;
+            }
+
+            th {
+                background: #222;
+                color: white;
+            }
+
+            input, select, button {
+                padding: 6px 10px;
+                margin: 2px;
+            }
+
+            button {
+                cursor: pointer;
+                background: #222;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Order Admin Dashboard</h1>
+
+        <a href="/admin">Complaint Dashboard</a>
+        <a href="/admin/returns">Return Dashboard</a>
+        <a href="/admin/products">Product Dashboard</a>
+        <a href="/chat">Web Chat</a>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Order ID</th>
+                    <th>Status</th>
+                    <th>Expected Delivery</th>
+                    <th>Update</th>
+                </tr>
+            </thead>
+            <tbody id="ordersTable">
+            </tbody>
+        </table>
+
+        <script>
+            async function loadOrders() {
+                const response = await fetch('/orders');
+                const orders = await response.json();
+
+                const table = document.getElementById('ordersTable');
+                table.innerHTML = '';
+
+                orders.forEach(order => {
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${order.id}</td>
+                        <td>${order.order_id}</td>
+                        <td>
+                            <input id="status-${order.order_id}" value="${order.status}">
+                        </td>
+                        <td>
+                            <input id="delivery-${order.order_id}" value="${order.expected_delivery}">
+                        </td>
+                        <td>
+                            <button onclick="updateOrder('${order.order_id}')">Update</button>
+                        </td>
+                    `;
+
+                    table.appendChild(row);
+                });
+            }
+
+            async function updateOrder(orderId) {
+                const status = document.getElementById(`status-${orderId}`).value;
+                const expectedDelivery = document.getElementById(`delivery-${orderId}`).value;
+
+                const response = await fetch(`/orders/${orderId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: status,
+                        expected_delivery: expectedDelivery
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.updated) {
+                    alert('Order updated successfully');
+                    loadOrders();
+                } else {
+                    alert(result.message);
+                }
+            }
+
+            loadOrders();
+        </script>
+    </body>
+    </html>
+    """
+    
+@app.get("/admin/products", response_class=HTMLResponse)
+def products_admin_dashboard():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Product Admin Dashboard</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f4f6f8;
+                padding: 30px;
+            }
+
+            h1 {
+                color: #222;
+            }
+
+            a {
+                display: inline-block;
+                margin-right: 15px;
+                margin-bottom: 20px;
+                color: #222;
+                font-weight: bold;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background: white;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            th, td {
+                padding: 12px;
+                border-bottom: 1px solid #ddd;
+                text-align: left;
+            }
+
+            th {
+                background: #222;
+                color: white;
+            }
+
+            input, button {
+                padding: 6px 10px;
+                margin: 2px;
+            }
+
+            input {
+                width: 90%;
+            }
+
+            button {
+                cursor: pointer;
+                background: #222;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Product Admin Dashboard</h1>
+
+        <a href="/admin">Complaint Dashboard</a>
+        <a href="/admin/returns">Return Dashboard</a>
+        <a href="/admin/orders">Order Dashboard</a>
+        <a href="/chat">Web Chat</a>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product ID</th>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Category</th>
+                    <th>Update</th>
+                </tr>
+            </thead>
+            <tbody id="productsTable">
+            </tbody>
+        </table>
+
+        <script>
+            async function loadProducts() {
+                const response = await fetch('/products');
+                const products = await response.json();
+
+                const table = document.getElementById('productsTable');
+                table.innerHTML = '';
+
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${product.id}</td>
+                        <td>${product.product_id}</td>
+                        <td>
+                            <input id="name-${product.product_id}" value="${product.name}">
+                        </td>
+                        <td>
+                            <input id="price-${product.product_id}" type="number" value="${product.price}">
+                        </td>
+                        <td>
+                            <input id="stock-${product.product_id}" type="number" value="${product.stock}">
+                        </td>
+                        <td>
+                            <input id="category-${product.product_id}" value="${product.category}">
+                        </td>
+                        <td>
+                            <button onclick="updateProduct('${product.product_id}')">Update</button>
+                        </td>
+                    `;
+
+                    table.appendChild(row);
+                });
+            }
+
+            async function updateProduct(productId) {
+                const name = document.getElementById(`name-${productId}`).value;
+                const price = parseInt(document.getElementById(`price-${productId}`).value);
+                const stock = parseInt(document.getElementById(`stock-${productId}`).value);
+                const category = document.getElementById(`category-${productId}`).value;
+
+                const response = await fetch(`/products/${productId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        price: price,
+                        stock: stock,
+                        category: category
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.updated) {
+                    alert('Product updated successfully');
+                    loadProducts();
+                } else {
+                    alert(result.message);
+                }
+            }
+
+            loadProducts();
         </script>
     </body>
     </html>
