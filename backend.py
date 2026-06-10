@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import sqlite3
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
@@ -8,12 +10,17 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI()
 
+load_dotenv()
+
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD",)
+
 security = HTTPBasic()
 
 
 def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, "admin")
-    correct_password = secrets.compare_digest(credentials.password, "admin123")
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
 
     if not correct_username or not correct_password:
         raise HTTPException(
