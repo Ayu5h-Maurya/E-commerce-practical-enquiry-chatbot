@@ -1,0 +1,125 @@
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - track_order
+  - inform_order_id
+  - register_complaint
+  - check_complaint_status
+  - inform_ticket_id
+  - ask_product_info
+  - inform_product_name
+  - request_return_refund
+  - check_return_status
+  - inform_return_id
+
+entities:
+  - order_id
+  - ticket_id
+  - product_name
+  - return_id
+
+slots:
+  order_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: order_id
+
+  issue_description:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_text
+        conditions:
+          - active_loop: complaint_form
+            requested_slot: issue_description
+
+  product_name:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: product_name
+
+  return_reason:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_text
+        conditions:
+          - active_loop: return_form
+            requested_slot: return_reason
+
+  ticket_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: ticket_id
+
+  return_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: return_id
+
+forms:
+  complaint_form:
+    required_slots:
+      - order_id
+      - issue_description
+
+  return_form:
+    required_slots:
+      - order_id
+      - return_reason
+
+responses:
+  utter_greet:
+    - text: "Hi! I am your e-commerce support assistant. How can I help you?"
+
+  utter_goodbye:
+    - text: "Goodbye! Have a nice day."
+
+  utter_ask_order_id:
+    - text: "Sure, please enter your order ID."
+
+  utter_order_status:
+    - text: "Your order {order_id} is currently out for delivery."
+
+  utter_ask_complaint_form_order_id:
+    - text: "Please enter your order ID for the complaint."
+
+  utter_ask_complaint_form_issue_description:
+    - text: "Please describe the issue with your order."
+
+  utter_ask_ticket_id:
+    - text: "Sure, please enter your ticket ID."
+  utter_ask_product_name:
+    - text: "Which product are you looking for?"
+
+  utter_ask_return_form_order_id:
+    - text: "Please enter your order ID for the return/refund request."
+
+  utter_ask_return_form_return_reason:
+    - text: "Please tell me the reason for return or refund."
+
+  utter_ask_return_id:
+    - text: "Sure, please enter your return/refund ID."
+
+actions:
+  - action_track_order
+  - action_submit_complaint
+  - action_check_complaint_status
+  - action_product_enquiry
+  - action_clear_return_slots
+  - action_submit_return_request
+  - action_check_return_status
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

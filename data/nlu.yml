@@ -1,0 +1,157 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - hello
+    - hi
+    - hey
+    - good morning
+    - good evening
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you later
+    - talk to you later
+
+- intent: track_order
+  examples: |
+    - I want to track my order
+    - track my order
+    - where is my order
+    - order status
+    - check my order status
+    - I want to know my order status
+    - can you track my order
+
+- intent: inform_order_id
+  examples: |
+    - my order id is [12345](order_id)
+    - order id is [ORD123](order_id)
+    - [12345](order_id)
+    - [ORD789](order_id)
+    - track order [ORD555](order_id)
+    - check [98765](order_id)
+
+- intent: register_complaint
+  examples: |
+    - I want to raise a complaint
+    - I want to register a complaint
+    - I have a complaint
+    - my product is damaged
+    - my order is damaged
+    - I received wrong product
+    - I want to complain about my order
+    - raise complaint for order [12345](order_id)
+    - complaint for order [98765](order_id)
+    - my order [ORD789](order_id) has an issue
+
+- intent: check_complaint_status
+  examples: |
+    - I want to check my complaint status
+    - check complaint status
+    - check my ticket status
+    - track my complaint
+    - track my ticket
+    - what is the status of my complaint
+    - complaint status
+    - ticket status
+    - where is my complaint
+    - where is my ticket
+    - check status of ticket
+    - check status of complaint
+
+- intent: inform_ticket_id
+  examples: |
+    - my ticket id is [TICKET-1001](ticket_id)
+    - my ticket id is [TICKET-1002](ticket_id)
+    - ticket id is [TICKET-1001](ticket_id)
+    - ticket id is [TICKET-1002](ticket_id)
+    - complaint id is [TICKET-1001](ticket_id)
+    - complaint id is [TICKET-1002](ticket_id)
+    - [TICKET-1001](ticket_id)
+    - [TICKET-1002](ticket_id)
+    - [TICKET-1003](ticket_id)
+    - check [TICKET-1001](ticket_id)
+    - check [TICKET-1002](ticket_id)
+    - track [TICKET-1001](ticket_id)
+    - track [TICKET-1002](ticket_id)
+
+- regex: ticket_id
+  examples: |
+    - TICKET-[0-9]+
+
+
+- intent: ask_product_info
+  examples: |
+    - do you have wireless mouse
+    - is wireless mouse available
+    - I want to know about mechanical keyboard
+    - show me product details
+    - I want product details
+    - tell me about usb c cable
+    - is laptop stand in stock
+    - do you sell [wireless mouse](product_name)
+    - do you have [mechanical keyboard](product_name)
+    - tell me about [usb c cable](product_name)
+    - is [laptop stand](product_name) available
+
+- intent: inform_product_name
+  examples: |
+    - [wireless mouse](product_name)
+    - [mechanical keyboard](product_name)
+    - [usb c cable](product_name)
+    - [laptop stand](product_name)
+    - product is [wireless mouse](product_name)
+    - I am looking for [mechanical keyboard](product_name)
+    - show [usb c cable](product_name)
+
+- lookup: product_name
+  examples: |
+    - wireless mouse
+    - mechanical keyboard
+    - usb c cable
+    - laptop stand
+
+- intent: request_return_refund
+  examples: |
+    - I want to return my order
+    - I want a refund
+    - return my product
+    - refund my order
+    - I want to request a return
+    - I want to request a refund
+    - my product is damaged and I want refund
+    - I received wrong product and want to return it
+    - return order [12345](order_id)
+    - refund order [98765](order_id)
+    - I want refund for order [ORD789](order_id)
+
+- intent: check_return_status
+  examples: |
+    - check my return status
+    - check refund status
+    - track my return
+    - track my refund
+    - what is the status of my return
+    - what is the status of my refund
+    - return status
+    - refund status
+    - where is my return request
+    - where is my refund request
+
+- intent: inform_return_id
+  examples: |
+    - my return id is [RETURN-1001](return_id)
+    - return id is [RETURN-1002](return_id)
+    - refund id is [RETURN-1001](return_id)
+    - [RETURN-1001](return_id)
+    - [RETURN-1002](return_id)
+    - check [RETURN-1001](return_id)
+    - track [RETURN-1002](return_id)
+
+- regex: return_id
+  examples: |
+    - RETURN-[0-9]+

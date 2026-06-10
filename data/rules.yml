@@ -1,0 +1,56 @@
+version: "3.1"
+
+rules:
+- rule: Say hello
+  steps:
+  - intent: greet
+  - action: utter_greet
+
+- rule: Say goodbye
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- rule: Activate complaint form
+  steps:
+  - intent: register_complaint
+  - action: complaint_form
+  - active_loop: complaint_form
+
+- rule: Submit complaint form
+  condition:
+  - active_loop: complaint_form
+  steps:
+  - action: complaint_form
+  - active_loop: null
+  - action: action_submit_complaint
+
+- rule: Check complaint status when ticket id is provided
+  steps:
+  - intent: inform_ticket_id
+  - action: action_check_complaint_status
+
+- rule: Product name provided
+  steps:
+  - intent: inform_product_name
+  - action: action_product_enquiry
+
+- rule: Activate return form
+  steps:
+  - intent: request_return_refund
+  - action: action_clear_return_slots
+  - action: return_form
+  - active_loop: return_form
+
+- rule: Submit return form
+  condition:
+  - active_loop: return_form
+  steps:
+  - action: return_form
+  - active_loop: null
+  - action: action_submit_return_request
+
+- rule: Check return status when return id is provided
+  steps:
+  - intent: inform_return_id
+  - action: action_check_return_status

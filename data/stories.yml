@@ -1,0 +1,45 @@
+version: "3.1"
+
+stories:
+- story: greet path
+  steps:
+  - intent: greet
+  - action: utter_greet
+
+- story: track order path
+  steps:
+  - intent: track_order
+  - action: utter_ask_order_id
+  - intent: inform_order_id
+  - action: action_track_order
+
+- story: goodbye path
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: check complaint status path
+  steps:
+  - intent: check_complaint_status
+  - action: utter_ask_ticket_id
+  - intent: inform_ticket_id
+  - action: action_check_complaint_status
+
+- story: product enquiry with product name
+  steps:
+  - intent: ask_product_info
+  - action: action_product_enquiry
+
+- story: product enquiry after asking product name
+  steps:
+  - intent: ask_product_info
+  - action: action_product_enquiry
+  - intent: inform_product_name
+  - action: action_product_enquiry
+
+- story: check return status path
+  steps:
+  - intent: check_return_status
+  - action: utter_ask_return_id
+  - intent: inform_return_id
+  - action: action_check_return_status
