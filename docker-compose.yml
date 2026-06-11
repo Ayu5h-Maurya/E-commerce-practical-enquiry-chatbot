@@ -1,0 +1,37 @@
+services:
+  backend:
+    build: .
+    container_name: rasa_backend
+    command: uvicorn backend:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      RASA_SERVER_URL: http://rasa:5005
+      DATABASE_NAME: /app/storage/complaints.db
+    volumes:
+      - ./storage:/app/storage
+
+  actions:
+    build: .
+    container_name: rasa_actions
+    command: rasa run actions --actions actions --port 5055
+    ports:
+      - "5055:5055"
+    environment:
+      BACKEND_BASE_URL: http://backend:8000
+    depends_on:
+      - backend
+
+  rasa:
+    build: .
+    container_name: rasa_server
+    command: >
+      sh -c "rasa train &&
+             rasa run --enable-api --cors '*' --interface 0.0.0.0 --port 5005 --endpoints endpoints.docker.yml"
+    ports:
+      - "5005:5005"
+    depends_on:
+      - backend
+      - actions

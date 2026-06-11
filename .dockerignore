@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.rasa/
+.cache/
+models/
+*.db
+*.log
+.env
+.git/
+storage/
+screenshots/

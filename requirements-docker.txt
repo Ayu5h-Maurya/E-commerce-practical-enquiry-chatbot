@@ -1,0 +1,6 @@
+rasa
+rasa-sdk
+fastapi
+uvicorn
+requests
+python-dotenv

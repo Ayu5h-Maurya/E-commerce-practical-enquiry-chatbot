@@ -33,7 +33,7 @@ def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
 
     return credentials.username
 
-DATABASE_NAME = "complaints.db"
+DATABASE_NAME = os.getenv("DATABASE_NAME", "complaints.db")
 
 INITIAL_ORDERS = [
     {
