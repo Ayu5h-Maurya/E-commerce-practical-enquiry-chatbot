@@ -13,7 +13,9 @@ app = FastAPI()
 load_dotenv()
 
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD",)
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+RASA_SERVER_URL = os.getenv("RASA_SERVER_URL", "http://127.0.0.1:5005")
 
 security = HTTPBasic()
 
@@ -549,7 +551,7 @@ def update_return_status(return_id: str, update: ReturnStatusUpdate, admin: str 
 def send_message_to_rasa(chat_message: ChatMessage):
     try:
         response = requests.post(
-            "http://127.0.0.1:5005/webhooks/rest/webhook",
+            f"{RASA_SERVER_URL}/webhooks/rest/webhook",
             json={
                 "sender": chat_message.sender,
                 "message": chat_message.message

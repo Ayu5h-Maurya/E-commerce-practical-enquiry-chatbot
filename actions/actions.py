@@ -1,9 +1,14 @@
 from typing import Any, Text, Dict, List
-
+import os
+from dotenv import load_dotenv
 import requests
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet
+
+load_dotenv()
+
+BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8000")
 
 
 class ActionTrackOrder(Action):
@@ -26,7 +31,7 @@ class ActionTrackOrder(Action):
 
         try:
             response = requests.get(
-                f"http://127.0.0.1:8000/orders/{order_id}",
+                f"{BACKEND_BASE_URL}/orders/{order_id}",
                 timeout=5
             )
 
@@ -76,7 +81,7 @@ class ActionSubmitComplaint(Action):
 
         try:
             response = requests.post(
-                "http://127.0.0.1:8000/complaints",
+                f"{BACKEND_BASE_URL}/complaints",
                 json={
                     "order_id": order_id,
                     "issue_description": issue_description
@@ -131,7 +136,7 @@ class ActionCheckComplaintStatus(Action):
 
         try:
             response = requests.get(
-                f"http://127.0.0.1:8000/complaints/{ticket_id}",
+                f"{BACKEND_BASE_URL}/complaints/{ticket_id}",
                 timeout=5
             )
 
@@ -195,7 +200,7 @@ class ActionProductEnquiry(Action):
 
         try:
             response = requests.get(
-                "http://127.0.0.1:8000/products/search",
+                f"{BACKEND_BASE_URL}/products/search",
                 params={"q": product_name},
                 timeout=5
             )
@@ -274,7 +279,7 @@ class ActionSubmitReturnRequest(Action):
 
         try:
             response = requests.post(
-                "http://127.0.0.1:8000/returns",
+                f"{BACKEND_BASE_URL}/returns",
                 json={
                     "order_id": order_id,
                     "reason": return_reason
@@ -331,7 +336,7 @@ class ActionCheckReturnStatus(Action):
 
         try:
             response = requests.get(
-                f"http://127.0.0.1:8000/returns/{return_id}",
+                f"{BACKEND_BASE_URL}/returns/{return_id}",
                 timeout=5
             )
 
