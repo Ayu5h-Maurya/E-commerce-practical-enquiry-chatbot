@@ -1,0 +1,24 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-rasa.txt .
+
+RUN pip install --no-cache-dir -r requirements-rasa.txt
+
+COPY config.yml .
+COPY domain.yml .
+COPY credentials.yml .
+COPY endpoints.docker.yml .
+COPY data ./data
+
+RUN rasa train
+
+EXPOSE 5005
+
+CMD ["rasa", "run", "--enable-api", "--cors", "*", "--interface", "0.0.0.0", "--port", "5005", "--endpoints", "endpoints.docker.yml"]

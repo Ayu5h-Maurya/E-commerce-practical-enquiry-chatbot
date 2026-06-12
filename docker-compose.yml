@@ -1,8 +1,9 @@
 services:
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     container_name: rasa_backend
-    command: uvicorn backend:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     environment:
@@ -14,9 +15,10 @@ services:
       - ./storage:/app/storage
 
   actions:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.actions
     container_name: rasa_actions
-    command: rasa run actions --actions actions --port 5055
     ports:
       - "5055:5055"
     environment:
@@ -25,11 +27,10 @@ services:
       - backend
 
   rasa:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.rasa
     container_name: rasa_server
-    command: >
-      sh -c "rasa train &&
-             rasa run --enable-api --cors '*' --interface 0.0.0.0 --port 5005 --endpoints endpoints.docker.yml"
     ports:
       - "5005:5005"
     depends_on:
