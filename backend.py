@@ -7,6 +7,10 @@ from pydantic import BaseModel
 import requests
 import secrets
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from datetime import datetime, timezone
+
+def get_current_timestamp():
+    return datetime.now(timezone.utc).isoformat()
 
 app = FastAPI()
 
@@ -129,6 +133,43 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def get_table_columns(table_name: str):
+    conn = get_db_connection()
+    columns = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    conn.close()
+    return [column["name"] for column in columns]
+
+
+def add_column_if_not_exists(table_name: str, column_name: str, column_definition: str):
+    existing_columns = get_table_columns(table_name)
+
+    if column_name not in existing_columns:
+        conn = get_db_connection()
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
+        conn.commit()
+        conn.close()
+
+
+def add_timestamps_to_existing_tables():
+    tables = ["complaints", "return_requests", "orders", "products"]
+
+    for table in tables:
+        add_column_if_not_exists(table, "created_at", "TEXT")
+        add_column_if_not_exists(table, "updated_at", "TEXT")
+
+        timestamp = get_current_timestamp()
+
+        conn = get_db_connection()
+        conn.execute(
+            f"""
+            UPDATE {table}
+            SET created_at = COALESCE(created_at, ?),
+                updated_at = COALESCE(updated_at, ?)
+            """,
+            (timestamp, timestamp)
+        )
+        conn.commit()
+        conn.close()
 
 def create_complaints_table():
     conn = get_db_connection()
@@ -193,7 +234,57 @@ def create_products_table():
     )
     conn.commit()
     conn.close()
-    
+
+def create_complaint_status_history_table():
+    conn = get_db_connection()
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS complaint_status_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id TEXT NOT NULL,
+            old_status TEXT,
+            new_status TEXT NOT NULL,
+            changed_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def create_return_status_history_table():
+    conn = get_db_connection()
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS return_status_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            return_id TEXT NOT NULL,
+            old_status TEXT,
+            new_status TEXT NOT NULL,
+            changed_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def create_order_status_history_table():
+    conn = get_db_connection()
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS order_status_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id TEXT NOT NULL,
+            old_status TEXT,
+            new_status TEXT NOT NULL,
+            changed_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+   
 def seed_initial_data():
     conn = get_db_connection()
 
@@ -234,6 +325,13 @@ create_complaints_table()
 create_returns_table()
 create_orders_table()
 create_products_table()
+
+add_timestamps_to_existing_tables()
+
+create_complaint_status_history_table()
+create_return_status_history_table()
+create_order_status_history_table()
+
 seed_initial_data()
 
 
@@ -281,17 +379,35 @@ def create_complaint(complaint: ComplaintRequest):
 
     ticket_id = f"TICKET-{1000 + complaint_count + 1}"
 
+    timestamp = get_current_timestamp()
+
     conn.execute(
         """
         INSERT INTO complaints 
-        (ticket_id, order_id, issue_description, status)
-        VALUES (?, ?, ?, ?)
+        (ticket_id, order_id, issue_description, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             ticket_id,
             complaint.order_id,
             complaint.issue_description,
-            "open"
+            "open",
+            timestamp,
+            timestamp
+        )
+    )
+
+    conn.execute(
+        """
+        INSERT INTO complaint_status_history
+        (ticket_id, old_status, new_status, changed_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            ticket_id,
+            None,
+            "open",
+            timestamp
         )
     )
 
@@ -376,13 +492,30 @@ def update_complaint_status(ticket_id: str, update: ComplaintStatusUpdate, admin
             "message": "Complaint not found"
         }
 
+    timestamp = get_current_timestamp()
+    old_status = complaint["status"]
+
     conn.execute(
         """
         UPDATE complaints
-        SET status = ?
+        SET status = ?, updated_at = ?
         WHERE ticket_id = ?
         """,
-        (update.status, ticket_id)
+        (update.status, timestamp, ticket_id)
+    )
+
+    conn.execute(
+        """
+        INSERT INTO complaint_status_history
+        (ticket_id, old_status, new_status, changed_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            ticket_id,
+            old_status,
+            update.status,
+            timestamp
+        )
     )
 
     conn.commit()
@@ -433,17 +566,35 @@ def create_return_request(return_request: ReturnRequestCreate):
 
     return_id = f"RETURN-{1000 + return_count + 1}"
 
+    timestamp = get_current_timestamp()
+
     conn.execute(
         """
         INSERT INTO return_requests
-        (return_id, order_id, reason, status)
-        VALUES (?, ?, ?, ?)
+        (return_id, order_id, reason, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             return_id,
             return_request.order_id,
             return_request.reason,
-            "requested"
+            "requested",
+            timestamp,
+            timestamp
+        )
+    )
+
+    conn.execute(
+        """
+        INSERT INTO return_status_history
+        (return_id, old_status, new_status, changed_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            return_id,
+            None,
+            "requested",
+            timestamp
         )
     )
 
@@ -528,13 +679,30 @@ def update_return_status(return_id: str, update: ReturnStatusUpdate, admin: str 
             "message": "Return request not found"
         }
 
+    timestamp = get_current_timestamp()
+    old_status = return_request["status"]
+
     conn.execute(
         """
         UPDATE return_requests
-        SET status = ?
+        SET status = ?, updated_at = ?
         WHERE return_id = ?
         """,
-        (update.status, return_id)
+        (update.status, timestamp, return_id)
+    )
+
+    conn.execute(
+        """
+        INSERT INTO return_status_history
+        (return_id, old_status, new_status, changed_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            return_id,
+            old_status,
+            update.status,
+            timestamp
+        )
     )
 
     conn.commit()
@@ -623,13 +791,30 @@ def update_order(order_id: str, update: OrderStatusUpdate, admin: str = Depends(
             "message": "Order not found"
         }
 
+    timestamp = get_current_timestamp()
+    old_status = order["status"]
+
     conn.execute(
         """
         UPDATE orders
-        SET status = ?, expected_delivery = ?
+        SET status = ?, expected_delivery = ?, updated_at = ?
         WHERE order_id = ?
         """,
-        (update.status, update.expected_delivery, order_id)
+        (update.status, update.expected_delivery, timestamp, order_id)
+    )
+
+    conn.execute(
+        """
+        INSERT INTO order_status_history
+        (order_id, old_status, new_status, changed_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            order_id,
+            old_status,
+            update.status,
+            timestamp
+        )
     )
 
     conn.commit()
@@ -663,10 +848,12 @@ def update_product(product_id: str, update: ProductUpdate, admin: str = Depends(
             "message": "Product not found"
         }
 
+    timestamp = get_current_timestamp()
+
     conn.execute(
         """
         UPDATE products
-        SET name = ?, price = ?, stock = ?, category = ?
+        SET name = ?, price = ?, stock = ?, category = ?, updated_at = ?
         WHERE product_id = ?
         """,
         (
@@ -674,6 +861,7 @@ def update_product(product_id: str, update: ProductUpdate, admin: str = Depends(
             update.price,
             update.stock,
             update.category,
+            timestamp,
             product_id
         )
     )
@@ -686,6 +874,62 @@ def update_product(product_id: str, update: ProductUpdate, admin: str = Depends(
         "product_id": product_id,
         "message": "Product updated successfully"
     }
+    
+@app.get("/complaints/{ticket_id}/history")
+def get_complaint_status_history(ticket_id: str):
+    conn = get_db_connection()
+
+    history = conn.execute(
+        """
+        SELECT id, ticket_id, old_status, new_status, changed_at
+        FROM complaint_status_history
+        WHERE ticket_id = ?
+        ORDER BY id ASC
+        """,
+        (ticket_id,)
+    ).fetchall()
+
+    conn.close()
+
+    return [dict(item) for item in history]
+
+
+@app.get("/returns/{return_id}/history")
+def get_return_status_history(return_id: str):
+    conn = get_db_connection()
+
+    history = conn.execute(
+        """
+        SELECT id, return_id, old_status, new_status, changed_at
+        FROM return_status_history
+        WHERE return_id = ?
+        ORDER BY id ASC
+        """,
+        (return_id,)
+    ).fetchall()
+
+    conn.close()
+
+    return [dict(item) for item in history]
+
+
+@app.get("/orders/{order_id}/history")
+def get_order_status_history(order_id: str):
+    conn = get_db_connection()
+
+    history = conn.execute(
+        """
+        SELECT id, order_id, old_status, new_status, changed_at
+        FROM order_status_history
+        WHERE order_id = ?
+        ORDER BY id ASC
+        """,
+        (order_id,)
+    ).fetchall()
+
+    conn.close()
+
+    return [dict(item) for item in history]
 
 @app.get("/admin/returns", response_class=HTMLResponse)
 def returns_admin_dashboard(admin: str = Depends(verify_admin)):
